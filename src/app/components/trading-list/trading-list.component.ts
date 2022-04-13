@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Observable, Subscription } from 'rxjs';
+import { TradingService } from 'src/app/services/trading.service'
 
 @Component({
   selector: 'app-trading-list',
@@ -6,10 +8,53 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./trading-list.component.css']
 })
 export class TradingListComponent implements OnInit {
-
-  constructor() { }
+  dataSell: any;
+  dataBuy: any;
+  public _TradingSub: Subscription = new Subscription();
+  constructor(private tradingService: TradingService) { }
 
   ngOnInit(): void {
+    this.initData();
+    this.initSocket();
+  }
+  ngOnDestroy() {
+    this._TradingSub.unsubscribe();
+  }
+  get totalBuy() {
+    let total = 0
+    for (let item of this.dataBuy) {
+      total += Number(item.price) * Number(item.size)
+    }
+    return total.toFixed(8)
+  }
+  get totalSell() {
+    let total = 0
+    for (let item of this.dataBuy) {
+      total += Number(item.size)
+    }
+    return total.toFixed(8)
+  }
+  initData() {
+    this.tradingService.getData()
+      .subscribe(
+        response => {
+          let result = Object(response)
+          if (result['s'] === 200) {
+            let data = result.data
+            this.dataSell = data.sell
+            this.dataBuy = data.buy
+          }
+        },
+        error => {
+          console.log(error);
+        });
+  }
+  initSocket() {
+    this._TradingSub = this.tradingService.tradingLists.subscribe(response => {
+      let result = Object(response)
+      this.dataSell = result.sell
+      this.dataBuy = result.buy
+    });
   }
 
 }
