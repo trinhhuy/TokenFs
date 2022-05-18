@@ -10,6 +10,8 @@ import { TradingService } from 'src/app/services/trading.service'
 export class TradingListComponent implements OnInit {
   dataSell: any;
   dataBuy: any;
+  interval: any;
+
   public _TradingSub: Subscription = new Subscription();
   constructor(private tradingService: TradingService) { }
 
@@ -17,21 +19,30 @@ export class TradingListComponent implements OnInit {
     this.initData();
     this.initSocket();
   }
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this._TradingSub.unsubscribe();
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
   }
   get totalBuy() {
     let total = 0
-    for (let item of this.dataBuy) {
-      total += Number(item.price) * Number(item.size)
+    if (this.dataBuy && this.dataBuy.length) {
+      for (let item of this.dataBuy) {
+        total += Number(item.price) * Number(item.size)
+      }
     }
+
     return total.toFixed(8)
   }
   get totalSell() {
     let total = 0
-    for (let item of this.dataBuy) {
-      total += Number(item.size)
+    if (this.dataBuy && this.dataSell.length) {
+      for (let item of this.dataSell) {
+        total += Number(item.size)
+      }
     }
+
     return total.toFixed(8)
   }
   initData() {
@@ -39,15 +50,15 @@ export class TradingListComponent implements OnInit {
       .subscribe(
         response => {
           let result = Object(response)
-          if (result['s'] === 200) {
-            let data = result.data
-            this.dataSell = data.sell
-            this.dataBuy = data.buy
-          }
+          this.dataSell = result.sell
+          this.dataBuy = result.buy
         },
         error => {
           console.log(error);
         });
+    this.interval = setInterval(() => {
+      this.tradingService.sendMessage(true);
+    }, 3000);
   }
   initSocket() {
     this._TradingSub = this.tradingService.tradingLists.subscribe(response => {
